@@ -91,6 +91,28 @@ victims to female victims. Do this within a “tidy” pipeline, making use
 of purrr::map, list columns, and unnest as necessary to create a
 dataframe with estimated ORs and CIs for each city.
 
+``` r
+baltimore_lm = 
+  usa_df |>
+  filter(city_state == "Baltimore,MD") |>
+  glm(resolved ~ victim_age + victim_sex + victim_race, data = _, family = binomial()) 
+```
+
+``` r
+baltimore_lm |> 
+  broom::tidy() |> 
+  mutate(OR = exp(estimate)) |>
+  select(term, log_OR = estimate, OR, p.value) |> 
+  knitr::kable(digits = 3)
+```
+
+| term             | log_OR |    OR | p.value |
+|:-----------------|-------:|------:|--------:|
+| (Intercept)      |  0.310 | 1.363 |   0.070 |
+| victim_age       | -0.007 | 0.993 |   0.043 |
+| victim_sexMale   | -0.854 | 0.426 |   0.000 |
+| victim_raceWhite |  0.842 | 2.320 |   0.000 |
+
 Create a plot that shows the estimated ORs and CIs for each city.
 Organize cities according to estimated OR, and comment on the plot.
 
