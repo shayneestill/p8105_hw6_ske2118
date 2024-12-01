@@ -52,6 +52,32 @@ Also omit Tulsa, AL – this is a data entry mistake. For this problem,
 limit your analysis those for whom victim_race is white or black. Be
 sure that victim_age is numeric.
 
+``` r
+usa_df = 
+   read_csv("data/homicide-data.csv") |>
+  mutate(city_state = str_c(city, state, sep = ",")) |>
+   mutate(resolved = 
+           as.numeric(disposition == "Closed by arrest")) |>
+  filter(!city_state %in% c("Dallas,TX", "Phoenix,AZ", 
+                            "Kansas City,MO", "Tulsa,AL")) |>
+  filter(victim_race %in% c("White", "Black")) |>
+  mutate(victim_age = as.numeric(victim_age)) 
+```
+
+    ## Rows: 52179 Columns: 12
+    ## ── Column specification ────────────────────────────────────────────────────────
+    ## Delimiter: ","
+    ## chr (9): uid, victim_last, victim_first, victim_race, victim_age, victim_sex...
+    ## dbl (3): reported_date, lat, lon
+    ## 
+    ## ℹ Use `spec()` to retrieve the full column specification for this data.
+    ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+
+    ## Warning: There was 1 warning in `mutate()`.
+    ## ℹ In argument: `victim_age = as.numeric(victim_age)`.
+    ## Caused by warning:
+    ## ! NAs introduced by coercion
+
 For the city of Baltimore, MD, use the glm function to fit a logistic
 regression with resolved vs unresolved as the outcome and victim age,
 sex and race as predictors. Save the output of glm as an R object; apply
