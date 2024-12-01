@@ -68,9 +68,12 @@ baltimore_lm =
 
 ```{r}
 baltimore_lm |> 
-  broom::tidy() |> 
-  mutate(OR = exp(estimate)) |>
-  select(term, log_OR = estimate, OR, p.value) |> 
+  broom::tidy(conf.int = TRUE) |> 
+  mutate(OR = exp(estimate),
+         CI_low = exp(conf.low),
+         CI_high = exp(conf.high)) |>
+  filter(term == "victim_sexMale") |>
+  select(term, log_OR = estimate, OR, CI_low, CI_high, p.value) |> 
   knitr::kable(digits = 3)
 ```
 

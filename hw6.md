@@ -100,18 +100,18 @@ baltimore_lm =
 
 ``` r
 baltimore_lm |> 
-  broom::tidy() |> 
-  mutate(OR = exp(estimate)) |>
-  select(term, log_OR = estimate, OR, p.value) |> 
+  broom::tidy(conf.int = TRUE) |> 
+  mutate(OR = exp(estimate),
+         CI_low = exp(conf.low),
+         CI_high = exp(conf.high)) |>
+  filter(term == "victim_sexMale") |>
+  select(term, log_OR = estimate, OR, CI_low, CI_high, p.value) |> 
   knitr::kable(digits = 3)
 ```
 
-| term             | log_OR |    OR | p.value |
-|:-----------------|-------:|------:|--------:|
-| (Intercept)      |  0.310 | 1.363 |   0.070 |
-| victim_age       | -0.007 | 0.993 |   0.043 |
-| victim_sexMale   | -0.854 | 0.426 |   0.000 |
-| victim_raceWhite |  0.842 | 2.320 |   0.000 |
+| term           | log_OR |    OR | CI_low | CI_high | p.value |
+|:---------------|-------:|------:|-------:|--------:|--------:|
+| victim_sexMale | -0.854 | 0.426 |  0.324 |   0.558 |       0 |
 
 Create a plot that shows the estimated ORs and CIs for each city.
 Organize cities according to estimated OR, and comment on the plot.
