@@ -6,6 +6,9 @@ output: github_document
 
 ```{r setup, include = FALSE}
 library(tidyverse)
+library(rvest)
+library(modelr)
+library(mgcv)
 ```
 
 ## Problem 1 ##
@@ -56,29 +59,62 @@ usa_df =
 
 For the city of Baltimore, MD, use the glm function to fit a logistic regression with resolved vs unresolved as the outcome and victim age, sex and race as predictors. Save the output of glm as an R object; apply the broom::tidy to this object; and obtain the estimate and confidence interval of the adjusted odds ratio for solving homicides comparing male victims to female victims keeping all other variables fixed.
 
-Now run glm for each of the cities in your dataset, and extract the adjusted odds ratio (and CI) for solving homicides comparing male victims to female victims. Do this within a “tidy” pipeline, making use of purrr::map, list columns, and unnest as necessary to create a dataframe with estimated ORs and CIs for each city.
-
 
 ```{r}
-baltimore_lm = 
+baltimore_glm = 
   usa_df |>
   filter(city_state == "Baltimore,MD") |>
   glm(resolved ~ victim_age + victim_sex + victim_race, data = _, family = binomial()) 
 ```
 
 ```{r}
-baltimore_lm |> 
+baltimore_glm |> 
   broom::tidy(conf.int = TRUE) |> 
   mutate(OR = exp(estimate),
          CI_low = exp(conf.low),
          CI_high = exp(conf.high)) |>
   filter(term == "victim_sexMale") |>
-  select(term, log_OR = estimate, OR, CI_low, CI_high, p.value) |> 
+  select(term, OR, CI_low, CI_high) |> 
   knitr::kable(digits = 3)
 ```
 
-```{r}
+Now run glm for each of the cities in your dataset, and extract the adjusted odds ratio (and CI) for solving homicides comparing male victims to female victims. Do this within a “tidy” pipeline, making use of purrr::map, list columns, and unnest as necessary to create a dataframe with estimated ORs and CIs for each city.
 
+```{r}
+run_glm_for_city <- function(city) {
+  glm_fit <- usa_df |>
+    filter(city_state == city) |>
+    glm(resolved ~ victim_age + victim_sex + victim_race, data = _, family = binomial())
+  
+  glm_fit |>
+    broom::tidy(conf.int = TRUE) |>
+    filter(term == "victim_sexmale") |>
+    mutate(
+      OR = exp(estimate),
+      CI_low = exp(conf.low),
+      CI_high = exp(conf.high)
+    ) |>
+    select(city_state = city, OR, CI_low, CI_high)
+}
+```
+
+
+```{r}
+usa_glm = function(path, city_state) {
+  
+  df = 
+  usa_df |>
+  nest(data = -city_state) |>
+  glm(resolved ~ victim_age + victim_sex + victim_race, data = _, family = binomial()) |>
+  
+  broom::tidy(conf.int = TRUE) |> 
+  mutate(OR = exp(estimate),
+         CI_low = exp(conf.low),
+         CI_high = exp(conf.high)) |>
+  filter(term == "victim_sexMale") |>
+  select(city_state, term, OR, CI_low, CI_high) |> 
+  knitr::kable(digits = 3)
+}
 ```
 
 
@@ -112,6 +148,51 @@ Load and clean the data for regression analysis (i.e. convert numeric to factor 
 
 Propose a regression model for birthweight. This model may be based on a hypothesized structure for the factors that underly birthweight, on a data-driven model-building process, or a combination of the two. Describe your modeling process and show a plot of model residuals against fitted values – use add_predictions and add_residuals in making this plot.
 
+```{r}
+baby_birthweight = 
+   read_csv("data/birthweight.csv") |>
+   mutate(
+     babysex = 
+        case_match(babysex,
+                    1 ~ "male",
+                    2 ~ "female"
+        ),
+     babysex = fct_infreq(babysex), 
+     frace = 
+       case_match(frace,
+                  1 ~ "White", 
+                  2 ~ "Black", 
+                  3 ~ "Asian", 
+                  4 ~ "Puerto Rican", 
+                  8 ~ "Other", 
+                  9 ~ "Unknown"),
+     frace = fct_infreq(frace),
+     malform = 
+       case_match(malform,
+                  0 ~ "absent", 
+                  1 ~ "present"),
+    malform = fct_infreq(malform),
+     mrace = 
+       case_match(mrace,
+                  1 ~ "White", 
+                  2 ~ "Black", 
+                  3 ~ "Asian", 
+                  4 ~ "Puerto Rican", 
+                  8 ~ "Other"),
+     mrace = fct_infreq(mrace)
+     )
+```
+
+```{r}
+model_smoken_momage = lm(bwt ~ smoken + momage, data = baby_birthweight)
+
+model_smoken_momage |> 
+  broom::tidy() |> 
+  knitr::kable(digits = 3)
+```
+
+Based on brief literature search, mother's smoking status and mother's age at time of birth tend to be associated with baby's birthweight. Smoken and momage both appear to be significant. 
+
 Compare your model to two others:
 
 One using length at birth and gestational age as predictors (main effects only)
@@ -120,7 +201,56 @@ Make this comparison in terms of the cross-validated prediction error; use cross
 
 Note that although we expect your model to be reasonable, model building itself is not a main idea of the course and we don’t necessarily expect your model to be “optimal”.
 
+```{r}
+model_blength_gaweeks = lm(bwt ~ blength + gaweeks, data = baby_birthweight)
+```
 
+```{r}
+model_bhead_blength_babysex = lm(bwt ~ bhead + blength + babysex + bhead*blength*babysex, data = baby_birthweight)
+```
 
+```{r}
+cv_df = 
+  crossv_mc(baby_birthweight, 100) |> 
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble)
+  )
+```
 
+```{r}
+cv_df |> 
+  pull(train) |> 
+  nth(3) |> 
+  as_tibble()
+```
 
+```{r}
+cv_res_df =
+  cv_df |> 
+  mutate(
+    model_one = map(train, \(df) lm(bwt ~ smoken + momage, data = df)),
+    model_two = map(train, \(df) lm(bwt ~ blength + gaweeks, data = df)),
+    model_three = map(train, \(df) lm(bwt ~ bhead + blength + babysex + bhead*blength*babysex, data = df))) |> 
+  mutate(
+    rmse_one = map2_dbl(model_one, test, rmse),
+    rmse_two = map2_dbl(model_two, test, rmse),
+    rmse_three = map2_dbl(model_three, test, rmse)
+  )
+```
+
+Look at RMSE distribution. 
+```{r}
+cv_res_df |> 
+  select(starts_with("rmse")) |> 
+  pivot_longer(
+    everything(),
+    names_to = "model", 
+    values_to = "rmse",
+    names_prefix = "rmse_"
+  ) |> 
+  ggplot(aes(x = model, y = rmse)) + 
+  geom_violin()
+```
+
+Model one has the highest rmse, whereas model two has the second highest rmse and model three has the lowest rmse. Model three, the model using using head circumference, length, sex, and all interactions (including the three-way interaction) is likely the best fit model. 

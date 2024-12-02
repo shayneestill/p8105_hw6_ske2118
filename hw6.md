@@ -18,6 +18,10 @@ weather_df =
   select(name, id, everything())
 ```
 
+    ## Registered S3 method overwritten by 'hoardr':
+    ##   method           from
+    ##   print.cache_info httr
+
     ## using cached file: /Users/shayneestill/Library/Caches/org.R-project.R/R/rnoaa/noaa_ghcnd/USW00094728.dly
 
     ## date created (size, mb): 2024-09-26 10:18:26.078569 (8.651)
@@ -85,6 +89,28 @@ the broom::tidy to this object; and obtain the estimate and confidence
 interval of the adjusted odds ratio for solving homicides comparing male
 victims to female victims keeping all other variables fixed.
 
+``` r
+baltimore_glm = 
+  usa_df |>
+  filter(city_state == "Baltimore,MD") |>
+  glm(resolved ~ victim_age + victim_sex + victim_race, data = _, family = binomial()) 
+```
+
+``` r
+baltimore_glm |> 
+  broom::tidy(conf.int = TRUE) |> 
+  mutate(OR = exp(estimate),
+         CI_low = exp(conf.low),
+         CI_high = exp(conf.high)) |>
+  filter(term == "victim_sexMale") |>
+  select(term, OR, CI_low, CI_high) |> 
+  knitr::kable(digits = 3)
+```
+
+| term           |    OR | CI_low | CI_high |
+|:---------------|------:|-------:|--------:|
+| victim_sexMale | 0.426 |  0.324 |   0.558 |
+
 Now run glm for each of the cities in your dataset, and extract the
 adjusted odds ratio (and CI) for solving homicides comparing male
 victims to female victims. Do this within a “tidy” pipeline, making use
@@ -92,26 +118,40 @@ of purrr::map, list columns, and unnest as necessary to create a
 dataframe with estimated ORs and CIs for each city.
 
 ``` r
-baltimore_lm = 
-  usa_df |>
-  filter(city_state == "Baltimore,MD") |>
-  glm(resolved ~ victim_age + victim_sex + victim_race, data = _, family = binomial()) 
+run_glm_for_city <- function(city) {
+  glm_fit <- usa_df |>
+    filter(city_state == city) |>
+    glm(resolved ~ victim_age + victim_sex + victim_race, data = _, family = binomial())
+  
+  glm_fit |>
+    broom::tidy(conf.int = TRUE) |>
+    filter(term == "victim_sexmale") |>
+    mutate(
+      OR = exp(estimate),
+      CI_low = exp(conf.low),
+      CI_high = exp(conf.high)
+    ) |>
+    select(city_state = city, OR, CI_low, CI_high)
+}
 ```
 
 ``` r
-baltimore_lm |> 
+usa_glm = function(path, city_state) {
+  
+  df = 
+  usa_df |>
+  nest(data = -city_state) |>
+  glm(resolved ~ victim_age + victim_sex + victim_race, data = _, family = binomial()) |>
+  
   broom::tidy(conf.int = TRUE) |> 
   mutate(OR = exp(estimate),
          CI_low = exp(conf.low),
          CI_high = exp(conf.high)) |>
   filter(term == "victim_sexMale") |>
-  select(term, log_OR = estimate, OR, CI_low, CI_high, p.value) |> 
+  select(city_state, term, OR, CI_low, CI_high) |> 
   knitr::kable(digits = 3)
+}
 ```
-
-| term           | log_OR |    OR | CI_low | CI_high | p.value |
-|:---------------|-------:|------:|-------:|--------:|--------:|
-| victim_sexMale | -0.854 | 0.426 |  0.324 |   0.558 |       0 |
 
 Create a plot that shows the estimated ORs and CIs for each city.
 Organize cities according to estimated OR, and comment on the plot.
@@ -149,6 +189,67 @@ Describe your modeling process and show a plot of model residuals
 against fitted values – use add_predictions and add_residuals in making
 this plot.
 
+``` r
+baby_birthweight = 
+   read_csv("data/birthweight.csv") |>
+   mutate(
+     babysex = 
+        case_match(babysex,
+                    1 ~ "male",
+                    2 ~ "female"
+        ),
+     babysex = fct_infreq(babysex), 
+     frace = 
+       case_match(frace,
+                  1 ~ "White", 
+                  2 ~ "Black", 
+                  3 ~ "Asian", 
+                  4 ~ "Puerto Rican", 
+                  8 ~ "Other", 
+                  9 ~ "Unknown"),
+     frace = fct_infreq(frace),
+     malform = 
+       case_match(malform,
+                  0 ~ "absent", 
+                  1 ~ "present"),
+    malform = fct_infreq(malform),
+     mrace = 
+       case_match(mrace,
+                  1 ~ "White", 
+                  2 ~ "Black", 
+                  3 ~ "Asian", 
+                  4 ~ "Puerto Rican", 
+                  8 ~ "Other"),
+     mrace = fct_infreq(mrace)
+     )
+```
+
+    ## Rows: 4342 Columns: 20
+    ## ── Column specification ────────────────────────────────────────────────────────
+    ## Delimiter: ","
+    ## dbl (20): babysex, bhead, blength, bwt, delwt, fincome, frace, gaweeks, malf...
+    ## 
+    ## ℹ Use `spec()` to retrieve the full column specification for this data.
+    ## ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+
+``` r
+model_smoken_momage = lm(bwt ~ smoken + momage, data = baby_birthweight)
+
+model_smoken_momage |> 
+  broom::tidy() |> 
+  knitr::kable(digits = 3)
+```
+
+| term        | estimate | std.error | statistic | p.value |
+|:------------|---------:|----------:|----------:|--------:|
+| (Intercept) | 2757.689 |    40.916 |    67.399 |       0 |
+| smoken      |   -5.971 |     1.039 |    -5.747 |       0 |
+| momage      |   18.792 |     1.985 |     9.469 |       0 |
+
+Based on brief literature search, mother’s smoking status and mother’s
+age at time of birth tend to be associated with baby’s birthweight.
+Smoken and momage both appear to be significant.
+
 Compare your model to two others:
 
 One using length at birth and gestational age as predictors (main
@@ -160,3 +261,81 @@ crossv_mc and functions in purrr as appropriate.
 Note that although we expect your model to be reasonable, model building
 itself is not a main idea of the course and we don’t necessarily expect
 your model to be “optimal”.
+
+``` r
+model_blength_gaweeks = lm(bwt ~ blength + gaweeks, data = baby_birthweight)
+```
+
+``` r
+model_bhead_blength_babysex = lm(bwt ~ bhead + blength + babysex + bhead*blength*babysex, data = baby_birthweight)
+```
+
+``` r
+cv_df = 
+  crossv_mc(baby_birthweight, 100) |> 
+  mutate(
+    train = map(train, as_tibble),
+    test = map(test, as_tibble)
+  )
+```
+
+``` r
+cv_df |> 
+  pull(train) |> 
+  nth(3) |> 
+  as_tibble()
+```
+
+    ## # A tibble: 3,473 × 20
+    ##    babysex bhead blength   bwt delwt fincome frace gaweeks malform menarche
+    ##    <fct>   <dbl>   <dbl> <dbl> <dbl>   <dbl> <fct>   <dbl> <fct>      <dbl>
+    ##  1 female     34      51  3629   177      35 White    39.9 absent        13
+    ##  2 male       34      48  3062   156      65 Black    25.9 absent        14
+    ##  3 female     36      50  3345   148      85 White    39.9 absent        12
+    ##  4 male       34      52  3062   157      55 White    40   absent        14
+    ##  5 female     34      52  3374   156       5 White    41.6 absent        13
+    ##  6 male       33      52  3374   129      55 White    40.7 absent        12
+    ##  7 female     33      46  2523   126      96 Black    40.3 absent        14
+    ##  8 female     33      49  2778   140       5 White    37.4 absent        12
+    ##  9 male       36      52  3515   146      85 White    40.3 absent        11
+    ## 10 male       33      50  3459   169      75 Black    40.7 absent        12
+    ## # ℹ 3,463 more rows
+    ## # ℹ 10 more variables: mheight <dbl>, momage <dbl>, mrace <fct>, parity <dbl>,
+    ## #   pnumlbw <dbl>, pnumsga <dbl>, ppbmi <dbl>, ppwt <dbl>, smoken <dbl>,
+    ## #   wtgain <dbl>
+
+``` r
+cv_res_df =
+  cv_df |> 
+  mutate(
+    model_one = map(train, \(df) lm(bwt ~ smoken + momage, data = df)),
+    model_two = map(train, \(df) lm(bwt ~ blength + gaweeks, data = df)),
+    model_three = map(train, \(df) lm(bwt ~ bhead + blength + babysex + bhead*blength*babysex, data = df))) |> 
+  mutate(
+    rmse_one = map2_dbl(model_one, test, rmse),
+    rmse_two = map2_dbl(model_two, test, rmse),
+    rmse_three = map2_dbl(model_three, test, rmse)
+  )
+```
+
+Look at RMSE distribution.
+
+``` r
+cv_res_df |> 
+  select(starts_with("rmse")) |> 
+  pivot_longer(
+    everything(),
+    names_to = "model", 
+    values_to = "rmse",
+    names_prefix = "rmse_"
+  ) |> 
+  ggplot(aes(x = model, y = rmse)) + 
+  geom_violin()
+```
+
+![](hw6_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+
+Model one has the highest rmse, whereas model two has the second highest
+rmse and model three has the lowest rmse. Model three, the model using
+using head circumference, length, sex, and all interactions (including
+the three-way interaction) is likely the best fit model.
