@@ -34,9 +34,11 @@ log(𝛽̂ 0∗𝛽̂ 1)
 Use 5000 bootstrap samples and, for each bootstrap sample, produce estimates of these two quantities. Plot the distribution of your estimates, and describe these in words. Using the 5000 bootstrap estimates, identify the 2.5% and 97.5% quantiles to provide a 95% confidence interval for 𝑟̂ 2
  and log(𝛽̂ 0∗𝛽̂ 1)
 . Note: broom::glance() is helpful for extracting 𝑟̂ 2
- from a fitted regression, and broom::tidy() (with some additional wrangling) should help in computing log(𝛽̂ 0∗𝛽̂ 1)
-.
+ from a fitted regression, and broom::tidy() (with some additional wrangling) should help in computing log(𝛽̂ 0∗𝛽̂ 1).
 
+```{r}
+
+```
 
 
 ## Problem 2 ##
@@ -78,47 +80,42 @@ baltimore_glm |>
   knitr::kable(digits = 3)
 ```
 
+The odds of solving homicides for male victims is 0.426 times the odds of solving homicides for female victims is 0.426. 
+
 Now run glm for each of the cities in your dataset, and extract the adjusted odds ratio (and CI) for solving homicides comparing male victims to female victims. Do this within a “tidy” pipeline, making use of purrr::map, list columns, and unnest as necessary to create a dataframe with estimated ORs and CIs for each city.
 
 ```{r}
-run_glm_for_city <- function(city) {
-  glm_fit <- usa_df |>
-    filter(city_state == city) |>
-    glm(resolved ~ victim_age + victim_sex + victim_race, data = _, family = binomial())
-  
-  glm_fit |>
-    broom::tidy(conf.int = TRUE) |>
-    filter(term == "victim_sexmale") |>
-    mutate(
-      OR = exp(estimate),
-      CI_low = exp(conf.low),
-      CI_high = exp(conf.high)
+usa_glm = usa_df |>
+  mutate(
+    victim_race = fct_relevel(victim_race, "White"), 
+    victim_sex = fct_relevel(victim_sex, "Female")) |>
+  select(city_state, resolved, victim_age, victim_sex, victim_race) |>
+    group_by(city_state) |>
+  nest() |>
+  mutate(
+    city_model = map(data, ~glm(resolved ~ victim_age + victim_sex + victim_race , data = ., family = binomial())),
+    city_results = map(city_model, broom::tidy)) |>
+  unnest(city_results) |> 
+  mutate( 
+    OR = exp(estimate), 
+    CI_low = exp(estimate - (1.96*std.error)) , 
+    CI_high = exp(estimate + (1.96*std.error)), 
     ) |>
-    select(city_state = city, OR, CI_low, CI_high)
-}
-```
+  select(city_state, term, OR, CI_low, CI_high) |>
+  filter(
+    term == "victim_sexMale") |>
+  select(city_state, OR, CI_low, CI_high) 
 
-
-```{r}
-usa_glm = function(path, city_state) {
-  
-  df = 
-  usa_df |>
-  nest(data = -city_state) |>
-  glm(resolved ~ victim_age + victim_sex + victim_race, data = _, family = binomial()) |>
-  
-  broom::tidy(conf.int = TRUE) |> 
-  mutate(OR = exp(estimate),
-         CI_low = exp(conf.low),
-         CI_high = exp(conf.high)) |>
-  filter(term == "victim_sexMale") |>
-  select(city_state, term, OR, CI_low, CI_high) |> 
-  knitr::kable(digits = 3)
-}
+knitr::kable(usa_glm, digits = 3)
 ```
 
 
 Create a plot that shows the estimated ORs and CIs for each city. Organize cities according to estimated OR, and comment on the plot.
+
+```{r}
+
+```
+
 
 
 ## Problem 3 ##

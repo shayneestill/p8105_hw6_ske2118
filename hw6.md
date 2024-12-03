@@ -41,7 +41,7 @@ of your estimates, and describe these in words. Using the 5000 bootstrap
 estimates, identify the 2.5% and 97.5% quantiles to provide a 95%
 confidence interval for 𝑟̂ 2 and log(𝛽̂ 0∗𝛽̂ 1) . Note: broom::glance() is
 helpful for extracting 𝑟̂ 2 from a fitted regression, and broom::tidy()
-(with some additional wrangling) should help in computing log(𝛽̂ 0∗𝛽̂ 1) .
+(with some additional wrangling) should help in computing log(𝛽̂ 0∗𝛽̂ 1).
 
 ## Problem 2
 
@@ -111,6 +111,9 @@ baltimore_glm |>
 |:---------------|------:|-------:|--------:|
 | victim_sexMale | 0.426 |  0.324 |   0.558 |
 
+The odds of solving homicides for male victims is 0.426 times the odds
+of solving homicides for female victims is 0.426.
+
 Now run glm for each of the cities in your dataset, and extract the
 adjusted odds ratio (and CI) for solving homicides comparing male
 victims to female victims. Do this within a “tidy” pipeline, making use
@@ -118,40 +121,79 @@ of purrr::map, list columns, and unnest as necessary to create a
 dataframe with estimated ORs and CIs for each city.
 
 ``` r
-run_glm_for_city <- function(city) {
-  glm_fit <- usa_df |>
-    filter(city_state == city) |>
-    glm(resolved ~ victim_age + victim_sex + victim_race, data = _, family = binomial())
-  
-  glm_fit |>
-    broom::tidy(conf.int = TRUE) |>
-    filter(term == "victim_sexmale") |>
-    mutate(
-      OR = exp(estimate),
-      CI_low = exp(conf.low),
-      CI_high = exp(conf.high)
+usa_glm = usa_df |>
+  mutate(
+    victim_race = fct_relevel(victim_race, "White"), 
+    victim_sex = fct_relevel(victim_sex, "Female")) |>
+  select(city_state, resolved, victim_age, victim_sex, victim_race) |>
+    group_by(city_state) |>
+  nest() |>
+  mutate(
+    city_model = map(data, ~glm(resolved ~ victim_age + victim_sex + victim_race , data = ., family = binomial())),
+    city_results = map(city_model, broom::tidy)) |>
+  unnest(city_results) |> 
+  mutate( 
+    OR = exp(estimate), 
+    CI_low = exp(estimate - (1.96*std.error)) , 
+    CI_high = exp(estimate + (1.96*std.error)), 
     ) |>
-    select(city_state = city, OR, CI_low, CI_high)
-}
+  select(city_state, term, OR, CI_low, CI_high) |>
+  filter(
+    term == "victim_sexMale") |>
+  select(city_state, OR, CI_low, CI_high) 
+
+knitr::kable(usa_glm, digits = 3)
 ```
 
-``` r
-usa_glm = function(path, city_state) {
-  
-  df = 
-  usa_df |>
-  nest(data = -city_state) |>
-  glm(resolved ~ victim_age + victim_sex + victim_race, data = _, family = binomial()) |>
-  
-  broom::tidy(conf.int = TRUE) |> 
-  mutate(OR = exp(estimate),
-         CI_low = exp(conf.low),
-         CI_high = exp(conf.high)) |>
-  filter(term == "victim_sexMale") |>
-  select(city_state, term, OR, CI_low, CI_high) |> 
-  knitr::kable(digits = 3)
-}
-```
+| city_state        |    OR | CI_low | CI_high |
+|:------------------|------:|-------:|--------:|
+| Albuquerque,NM    | 1.767 |  0.831 |   3.761 |
+| Atlanta,GA        | 1.000 |  0.684 |   1.463 |
+| Baltimore,MD      | 0.426 |  0.325 |   0.558 |
+| Baton Rouge,LA    | 0.381 |  0.209 |   0.695 |
+| Birmingham,AL     | 0.870 |  0.574 |   1.318 |
+| Boston,MA         | 0.674 |  0.356 |   1.276 |
+| Buffalo,NY        | 0.521 |  0.290 |   0.935 |
+| Charlotte,NC      | 0.884 |  0.557 |   1.403 |
+| Chicago,IL        | 0.410 |  0.336 |   0.501 |
+| Cincinnati,OH     | 0.400 |  0.236 |   0.677 |
+| Columbus,OH       | 0.532 |  0.378 |   0.750 |
+| Denver,CO         | 0.479 |  0.236 |   0.971 |
+| Detroit,MI        | 0.582 |  0.462 |   0.734 |
+| Durham,NC         | 0.812 |  0.392 |   1.683 |
+| Fort Worth,TX     | 0.669 |  0.397 |   1.127 |
+| Fresno,CA         | 1.335 |  0.580 |   3.071 |
+| Houston,TX        | 0.711 |  0.558 |   0.907 |
+| Indianapolis,IN   | 0.919 |  0.679 |   1.242 |
+| Jacksonville,FL   | 0.720 |  0.537 |   0.966 |
+| Las Vegas,NV      | 0.837 |  0.608 |   1.154 |
+| Long Beach,CA     | 0.410 |  0.156 |   1.082 |
+| Los Angeles,CA    | 0.662 |  0.458 |   0.956 |
+| Louisville,KY     | 0.491 |  0.305 |   0.790 |
+| Memphis,TN        | 0.723 |  0.529 |   0.988 |
+| Miami,FL          | 0.515 |  0.304 |   0.872 |
+| Milwaukee,wI      | 0.727 |  0.499 |   1.060 |
+| Minneapolis,MN    | 0.947 |  0.478 |   1.875 |
+| Nashville,TN      | 1.034 |  0.685 |   1.562 |
+| New Orleans,LA    | 0.585 |  0.422 |   0.811 |
+| New York,NY       | 0.262 |  0.138 |   0.499 |
+| Oakland,CA        | 0.563 |  0.365 |   0.868 |
+| Oklahoma City,OK  | 0.974 |  0.624 |   1.520 |
+| Omaha,NE          | 0.382 |  0.203 |   0.721 |
+| Philadelphia,PA   | 0.496 |  0.378 |   0.652 |
+| Pittsburgh,PA     | 0.431 |  0.265 |   0.700 |
+| Richmond,VA       | 1.006 |  0.498 |   2.033 |
+| San Antonio,TX    | 0.705 |  0.398 |   1.249 |
+| Sacramento,CA     | 0.669 |  0.335 |   1.337 |
+| Savannah,GA       | 0.867 |  0.422 |   1.780 |
+| San Bernardino,CA | 0.500 |  0.171 |   1.462 |
+| San Diego,CA      | 0.413 |  0.200 |   0.855 |
+| San Francisco,CA  | 0.608 |  0.317 |   1.165 |
+| St. Louis,MO      | 0.703 |  0.530 |   0.932 |
+| Stockton,CA       | 1.352 |  0.621 |   2.942 |
+| Tampa,FL          | 0.808 |  0.348 |   1.876 |
+| Tulsa,OK          | 0.976 |  0.614 |   1.552 |
+| Washington,DC     | 0.690 |  0.468 |   1.017 |
 
 Create a plot that shows the estimated ORs and CIs for each city.
 Organize cities according to estimated OR, and comment on the plot.
@@ -290,15 +332,15 @@ cv_df |>
     ##    babysex bhead blength   bwt delwt fincome frace gaweeks malform menarche
     ##    <fct>   <dbl>   <dbl> <dbl> <dbl>   <dbl> <fct>   <dbl> <fct>      <dbl>
     ##  1 female     34      51  3629   177      35 White    39.9 absent        13
-    ##  2 male       34      48  3062   156      65 Black    25.9 absent        14
-    ##  3 female     36      50  3345   148      85 White    39.9 absent        12
-    ##  4 male       34      52  3062   157      55 White    40   absent        14
-    ##  5 female     34      52  3374   156       5 White    41.6 absent        13
-    ##  6 male       33      52  3374   129      55 White    40.7 absent        12
-    ##  7 female     33      46  2523   126      96 Black    40.3 absent        14
-    ##  8 female     33      49  2778   140       5 White    37.4 absent        12
-    ##  9 male       36      52  3515   146      85 White    40.3 absent        11
-    ## 10 male       33      50  3459   169      75 Black    40.7 absent        12
+    ##  2 female     36      50  3345   148      85 White    39.9 absent        12
+    ##  3 female     34      52  3374   156       5 White    41.6 absent        13
+    ##  4 male       33      52  3374   129      55 White    40.7 absent        12
+    ##  5 female     33      46  2523   126      96 Black    40.3 absent        14
+    ##  6 male       36      52  3515   146      85 White    40.3 absent        11
+    ##  7 female     35      51  3317   130      55 White    43.4 absent        13
+    ##  8 female     35      48  3175   158      75 White    39.7 absent        13
+    ##  9 male       36      53  3629   147      75 White    41.3 absent        11
+    ## 10 male       35      51  3544   129      65 White    39.6 absent        12
     ## # ℹ 3,463 more rows
     ## # ℹ 10 more variables: mheight <dbl>, momage <dbl>, mrace <fct>, parity <dbl>,
     ## #   pnumlbw <dbl>, pnumsga <dbl>, ppbmi <dbl>, ppwt <dbl>, smoken <dbl>,
@@ -333,7 +375,7 @@ cv_res_df |>
   geom_violin()
 ```
 
-![](hw6_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+![](hw6_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
 
 Model one has the highest rmse, whereas model two has the second highest
 rmse and model three has the lowest rmse. Model three, the model using
