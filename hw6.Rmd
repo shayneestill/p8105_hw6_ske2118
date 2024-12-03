@@ -60,7 +60,7 @@ r_squared_plot <- ggplot(boot_results, aes(x = r_squared)) +
 
 r_squared_plot
 ```
-
+The r_squared plot distribution histogram is fairly symmetrically distribution around r_squared value of 0.915. 
 
 ```{r}
 log_beta_plot <- ggplot(boot_results, aes(x = log_beta0_beta1)) +
@@ -69,7 +69,7 @@ log_beta_plot <- ggplot(boot_results, aes(x = log_beta0_beta1)) +
 
 log_beta_plot
 ```
-
+The log_beta plot distribution histogram is fairly symmetrically distributed around log(beta0*beta1) value of 2.02. 
 
 ```{r}
 boot_results_CI = 

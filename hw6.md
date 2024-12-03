@@ -68,7 +68,9 @@ r_squared_plot
 
     ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 
-![](hw6_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
+![](hw6_files/figure-gfm/unnamed-chunk-3-1.png)<!-- --> The r_squared
+plot distribution histogram is fairly symmetrically distribution around
+r_squared value of 0.915.
 
 ``` r
 log_beta_plot <- ggplot(boot_results, aes(x = log_beta0_beta1)) +
@@ -80,7 +82,9 @@ log_beta_plot
 
     ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 
-![](hw6_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+![](hw6_files/figure-gfm/unnamed-chunk-4-1.png)<!-- --> The log_beta
+plot distribution histogram is fairly symmetrically distributed around
+log(beta0\*beta1) value of 2.02.
 
 ``` r
 boot_results_CI = 
@@ -473,16 +477,16 @@ cv_df |>
     ## # A tibble: 3,473 × 20
     ##    babysex bhead blength   bwt delwt fincome frace gaweeks malform menarche
     ##    <fct>   <dbl>   <dbl> <dbl> <dbl>   <dbl> <fct>   <dbl> <fct>      <dbl>
-    ##  1 female     34      51  3629   177      35 White    39.9 absent        13
+    ##  1 male       34      48  3062   156      65 Black    25.9 absent        14
     ##  2 female     36      50  3345   148      85 White    39.9 absent        12
     ##  3 male       34      52  3062   157      55 White    40   absent        14
     ##  4 female     34      52  3374   156       5 White    41.6 absent        13
-    ##  5 male       33      52  3374   129      55 White    40.7 absent        12
-    ##  6 female     33      46  2523   126      96 Black    40.3 absent        14
-    ##  7 female     33      49  2778   140       5 White    37.4 absent        12
-    ##  8 male       33      50  3459   169      75 Black    40.7 absent        12
-    ##  9 male       35      51  3459   146      55 White    39.4 absent        12
-    ## 10 female     35      48  3175   158      75 White    39.7 absent        13
+    ##  5 female     33      46  2523   126      96 Black    40.3 absent        14
+    ##  6 male       36      52  3515   146      85 White    40.3 absent        11
+    ##  7 male       33      50  3459   169      75 Black    40.7 absent        12
+    ##  8 female     35      51  3317   130      55 White    43.4 absent        13
+    ##  9 female     35      48  3175   158      75 White    39.7 absent        13
+    ## 10 male       36      53  3629   147      75 White    41.3 absent        11
     ## # ℹ 3,463 more rows
     ## # ℹ 10 more variables: mheight <dbl>, momage <dbl>, mrace <fct>, parity <dbl>,
     ## #   pnumlbw <dbl>, pnumsga <dbl>, ppbmi <dbl>, ppwt <dbl>, smoken <dbl>,
