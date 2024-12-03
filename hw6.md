@@ -214,6 +214,16 @@ usa_glm_plot
 
 ![](hw6_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
+New York, NY has the lowest odds of solved homicides for males compared
+to female victims, adjusted for race and age, whereas Aluquerque, NM has
+the highest odds of solved homicides for males compared to female
+victims, adjusting for race and age. The confidence intervals for
+Fresno, CA, Stockton, CA, Albuquerque, NM are very very large where the
+confidence intervals for the lower OR cities tend to be much smaller. It
+is important to note than many of the confidence intervals contain the
+null value of 1, thus suggesting a lack of evidence of a difference in
+oddds of solve homicides by gender, adjusting for race and age.
+
 ## Problem 3
 
 In this problem, you will analyze data gathered to understand the
@@ -347,16 +357,16 @@ cv_df |>
     ## # A tibble: 3,473 × 20
     ##    babysex bhead blength   bwt delwt fincome frace gaweeks malform menarche
     ##    <fct>   <dbl>   <dbl> <dbl> <dbl>   <dbl> <fct>   <dbl> <fct>      <dbl>
-    ##  1 male       34      52  3062   157      55 White    40   absent        14
-    ##  2 female     34      52  3374   156       5 White    41.6 absent        13
-    ##  3 male       33      52  3374   129      55 White    40.7 absent        12
-    ##  4 female     33      46  2523   126      96 Black    40.3 absent        14
-    ##  5 male       36      52  3515   146      85 White    40.3 absent        11
-    ##  6 female     35      51  3317   130      55 White    43.4 absent        13
-    ##  7 male       35      51  3459   146      55 White    39.4 absent        12
-    ##  8 female     35      48  3175   158      75 White    39.7 absent        13
-    ##  9 male       36      53  3629   147      75 White    41.3 absent        11
-    ## 10 male       35      51  3544   129      65 White    39.6 absent        12
+    ##  1 male       34      48  3062   156      65 Black    25.9 absent        14
+    ##  2 female     36      50  3345   148      85 White    39.9 absent        12
+    ##  3 male       34      52  3062   157      55 White    40   absent        14
+    ##  4 female     34      52  3374   156       5 White    41.6 absent        13
+    ##  5 male       33      52  3374   129      55 White    40.7 absent        12
+    ##  6 female     33      46  2523   126      96 Black    40.3 absent        14
+    ##  7 female     33      49  2778   140       5 White    37.4 absent        12
+    ##  8 male       36      52  3515   146      85 White    40.3 absent        11
+    ##  9 male       33      50  3459   169      75 Black    40.7 absent        12
+    ## 10 male       35      51  3459   146      55 White    39.4 absent        12
     ## # ℹ 3,463 more rows
     ## # ℹ 10 more variables: mheight <dbl>, momage <dbl>, mrace <fct>, parity <dbl>,
     ## #   pnumlbw <dbl>, pnumsga <dbl>, ppbmi <dbl>, ppwt <dbl>, smoken <dbl>,
