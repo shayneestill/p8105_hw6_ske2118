@@ -113,7 +113,17 @@ knitr::kable(usa_glm, digits = 3)
 Create a plot that shows the estimated ORs and CIs for each city. Organize cities according to estimated OR, and comment on the plot.
 
 ```{r}
+  usa_glm_plot = 
+  usa_glm |>
+  ggplot(aes(x = fct_reorder(city_state, OR), y = OR)) + 
+  geom_point() + 
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high)) +
+  theme(axis.text.x = element_text(angle = 80, hjust = 1)) +
+  labs(title = "Solving Homicides Comparing Male Victims to Female Victims",
+  x = "City, State", 
+  y = "OR with 95% CI")
 
+usa_glm_plot
 ```
 
 

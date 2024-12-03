@@ -198,6 +198,22 @@ knitr::kable(usa_glm, digits = 3)
 Create a plot that shows the estimated ORs and CIs for each city.
 Organize cities according to estimated OR, and comment on the plot.
 
+``` r
+  usa_glm_plot = 
+  usa_glm |>
+  ggplot(aes(x = fct_reorder(city_state, OR), y = OR)) + 
+  geom_point() + 
+  geom_errorbar(aes(ymin = CI_low, ymax = CI_high)) +
+  theme(axis.text.x = element_text(angle = 80, hjust = 1)) +
+  labs(title = "Solving Homicides Comparing Male Victims to Female Victims",
+  x = "City, State", 
+  y = "OR with 95% CI")
+
+usa_glm_plot
+```
+
+![](hw6_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+
 ## Problem 3
 
 In this problem, you will analyze data gathered to understand the
@@ -331,13 +347,13 @@ cv_df |>
     ## # A tibble: 3,473 × 20
     ##    babysex bhead blength   bwt delwt fincome frace gaweeks malform menarche
     ##    <fct>   <dbl>   <dbl> <dbl> <dbl>   <dbl> <fct>   <dbl> <fct>      <dbl>
-    ##  1 female     34      51  3629   177      35 White    39.9 absent        13
-    ##  2 female     36      50  3345   148      85 White    39.9 absent        12
-    ##  3 female     34      52  3374   156       5 White    41.6 absent        13
-    ##  4 male       33      52  3374   129      55 White    40.7 absent        12
-    ##  5 female     33      46  2523   126      96 Black    40.3 absent        14
-    ##  6 male       36      52  3515   146      85 White    40.3 absent        11
-    ##  7 female     35      51  3317   130      55 White    43.4 absent        13
+    ##  1 male       34      52  3062   157      55 White    40   absent        14
+    ##  2 female     34      52  3374   156       5 White    41.6 absent        13
+    ##  3 male       33      52  3374   129      55 White    40.7 absent        12
+    ##  4 female     33      46  2523   126      96 Black    40.3 absent        14
+    ##  5 male       36      52  3515   146      85 White    40.3 absent        11
+    ##  6 female     35      51  3317   130      55 White    43.4 absent        13
+    ##  7 male       35      51  3459   146      55 White    39.4 absent        12
     ##  8 female     35      48  3175   158      75 White    39.7 absent        13
     ##  9 male       36      53  3629   147      75 White    41.3 absent        11
     ## 10 male       35      51  3544   129      65 White    39.6 absent        12
