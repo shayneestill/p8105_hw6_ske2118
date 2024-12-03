@@ -36,9 +36,52 @@ Use 5000 bootstrap samples and, for each bootstrap sample, produce estimates of 
 . Note: broom::glance() is helpful for extracting 𝑟̂ 2
  from a fitted regression, and broom::tidy() (with some additional wrangling) should help in computing log(𝛽̂ 0∗𝛽̂ 1).
 
-```{r}
 
+```{r}
+boot_results <- weather_df |> 
+  modelr::bootstrap(n = 5000) |> 
+  mutate(
+    models = map(strap, ~ lm(tmax ~ tmin, data = .x)),
+    r_squared = map_dbl(models, ~ broom::glance(.x)$r.squared),
+    log_beta0_beta1 = map_dbl(models, function(model) {
+      coefs <- broom::tidy(model)
+      beta0 <- coefs$estimate[coefs$term == "(Intercept)"]
+      beta1 <- coefs$estimate[coefs$term == "tmin"]
+      log(beta0 * beta1)
+    })
+  )
 ```
+
+
+```{r}
+r_squared_plot <- ggplot(boot_results, aes(x = r_squared)) +
+  geom_histogram(alpha = 0.7) +
+  labs(title = "R-squared Distribution", x = "R-squared", y = "Frequency")
+
+r_squared_plot
+```
+
+
+```{r}
+log_beta_plot <- ggplot(boot_results, aes(x = log_beta0_beta1)) +
+  geom_histogram(alpha = 0.7) +
+  labs(title = "log(beta0 * beta1) Distribution", x = "log(beta0 * beta1)", y = "Frequency")
+
+log_beta_plot
+```
+
+
+```{r}
+boot_results_CI = 
+  boot_results |>
+  summarize(
+ci_r_squared = quantile(r_squared, c(0.025, 0.975)), 
+ci_log_beta = quantile(log_beta0_beta1, c(0.025, 0.975))
+)
+```
+
+
+
 
 
 ## Problem 2 ##
@@ -207,7 +250,8 @@ modelr::add_predictions(baby_birthweight, model_smoken_momage)
 baby_birthweight |> 
   modelr::add_residuals(model_smoken_momage) |>
   modelr::add_predictions(model_smoken_momage) |> 
-  ggplot(aes(x = resid, y = pred)) + geom_point()
+  ggplot(aes(x = resid, y = pred)) + geom_point() + 
+ labs(title = "Model_smoken_momage Residuals Against Fitted Values")
 ```
 
 This plot shows the model_smoken_momage regression plot of model residuals against fitted values. The points appear mostly equally distributed around residual = 0 with a possible slight left skew. 
@@ -269,7 +313,7 @@ cv_res_df |>
     names_prefix = "rmse_"
   ) |> 
   ggplot(aes(x = model, y = rmse)) + 
-  geom_violin()
+  geom_violin() 
 ```
 
 Model one has the highest rmse, whereas model two has the second highest rmse and model three has the lowest rmse. Model three, the model using using head circumference, length, sex, and all interactions (including the three-way interaction) is likely the best fit model. 

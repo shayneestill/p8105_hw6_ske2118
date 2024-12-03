@@ -43,6 +43,62 @@ confidence interval for 𝑟̂ 2 and log(𝛽̂ 0∗𝛽̂ 1) . Note: broom::gla
 helpful for extracting 𝑟̂ 2 from a fitted regression, and broom::tidy()
 (with some additional wrangling) should help in computing log(𝛽̂ 0∗𝛽̂ 1).
 
+``` r
+boot_results <- weather_df |> 
+  modelr::bootstrap(n = 5000) |> 
+  mutate(
+    models = map(strap, ~ lm(tmax ~ tmin, data = .x)),
+    r_squared = map_dbl(models, ~ broom::glance(.x)$r.squared),
+    log_beta0_beta1 = map_dbl(models, function(model) {
+      coefs <- broom::tidy(model)
+      beta0 <- coefs$estimate[coefs$term == "(Intercept)"]
+      beta1 <- coefs$estimate[coefs$term == "tmin"]
+      log(beta0 * beta1)
+    })
+  )
+```
+
+``` r
+r_squared_plot <- ggplot(boot_results, aes(x = r_squared)) +
+  geom_histogram(alpha = 0.7) +
+  labs(title = "R-squared Distribution", x = "R-squared", y = "Frequency")
+
+r_squared_plot
+```
+
+    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+
+![](hw6_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
+
+``` r
+log_beta_plot <- ggplot(boot_results, aes(x = log_beta0_beta1)) +
+  geom_histogram(alpha = 0.7) +
+  labs(title = "log(beta0 * beta1) Distribution", x = "log(beta0 * beta1)", y = "Frequency")
+
+log_beta_plot
+```
+
+    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
+
+![](hw6_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+
+``` r
+boot_results_CI = 
+  boot_results |>
+  summarize(
+ci_r_squared = quantile(r_squared, c(0.025, 0.975)), 
+ci_log_beta = quantile(log_beta0_beta1, c(0.025, 0.975))
+)
+```
+
+    ## Warning: Returning more (or less) than 1 row per `summarise()` group was deprecated in
+    ## dplyr 1.1.0.
+    ## ℹ Please use `reframe()` instead.
+    ## ℹ When switching from `summarise()` to `reframe()`, remember that `reframe()`
+    ##   always returns an ungrouped data frame and adjust accordingly.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
+
 ## Problem 2
 
 The Washington Post has gathered data on homicides in 50 large U.S.
@@ -213,7 +269,7 @@ Organize cities according to estimated OR, and comment on the plot.
 usa_glm_plot
 ```
 
-![](hw6_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](hw6_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
 New York, NY has the lowest odds of solved homicides for males compared
 to female victims, adjusted for race and age, whereas Aluquerque, NM has
@@ -368,10 +424,11 @@ modelr::add_predictions(baby_birthweight, model_smoken_momage)
 baby_birthweight |> 
   modelr::add_residuals(model_smoken_momage) |>
   modelr::add_predictions(model_smoken_momage) |> 
-  ggplot(aes(x = resid, y = pred)) + geom_point()
+  ggplot(aes(x = resid, y = pred)) + geom_point() + 
+ labs(title = "Model_smoken_momage Residuals Against Fitted Values")
 ```
 
-![](hw6_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+![](hw6_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
 
 This plot shows the model_smoken_momage regression plot of model
 residuals against fitted values. The points appear mostly equally
@@ -423,9 +480,9 @@ cv_df |>
     ##  5 male       33      52  3374   129      55 White    40.7 absent        12
     ##  6 female     33      46  2523   126      96 Black    40.3 absent        14
     ##  7 female     33      49  2778   140       5 White    37.4 absent        12
-    ##  8 male       36      52  3515   146      85 White    40.3 absent        11
-    ##  9 male       33      50  3459   169      75 Black    40.7 absent        12
-    ## 10 female     35      51  3317   130      55 White    43.4 absent        13
+    ##  8 male       33      50  3459   169      75 Black    40.7 absent        12
+    ##  9 male       35      51  3459   146      55 White    39.4 absent        12
+    ## 10 female     35      48  3175   158      75 White    39.7 absent        13
     ## # ℹ 3,463 more rows
     ## # ℹ 10 more variables: mheight <dbl>, momage <dbl>, mrace <fct>, parity <dbl>,
     ## #   pnumlbw <dbl>, pnumsga <dbl>, ppbmi <dbl>, ppwt <dbl>, smoken <dbl>,
@@ -457,10 +514,10 @@ cv_res_df |>
     names_prefix = "rmse_"
   ) |> 
   ggplot(aes(x = model, y = rmse)) + 
-  geom_violin()
+  geom_violin() 
 ```
 
-![](hw6_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+![](hw6_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
 
 Model one has the highest rmse, whereas model two has the second highest
 rmse and model three has the lowest rmse. Model three, the model using
