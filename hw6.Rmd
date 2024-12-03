@@ -48,7 +48,7 @@ Create a city_state variable (e.g. “Baltimore, MD”), and a binary variable i
 
 ```{r}
 usa_df = 
-   read_csv("data/homicide-data.csv") |>
+   read_csv("data/homicide-data.csv", na = c("NA", ".", "")) |>
   mutate(city_state = str_c(city, state, sep = ",")) |>
    mutate(resolved = 
            as.numeric(disposition == "Closed by arrest")) |>
@@ -80,7 +80,7 @@ baltimore_glm |>
   knitr::kable(digits = 3)
 ```
 
-The odds of solving homicides for male victims is 0.426 times the odds of solving homicides for female victims is 0.426. 
+The odds of solving homicides for male victims is 0.426 times the odds of solving homicides for female victims is 0.426, adjusting for sex and race. The 95% confidence interval is (0.324, 0.558). 
 
 Now run glm for each of the cities in your dataset, and extract the adjusted odds ratio (and CI) for solving homicides comparing male victims to female victims. Do this within a “tidy” pipeline, making use of purrr::map, list columns, and unnest as necessary to create a dataframe with estimated ORs and CIs for each city.
 
@@ -198,13 +198,25 @@ model_smoken_momage |>
   knitr::kable(digits = 3)
 ```
 
-Based on brief literature search, mother's smoking status and mother's age at time of birth tend to be associated with baby's birthweight. Smoken and momage both appear to be significant. 
+Based on brief literature search, mother's smoking status and mother's age at time of birth tend to be associated with baby's birthweight. Smoken and momage both appear to be significant with p-values less than 0.05. 
+
+```{r}
+modelr::add_residuals(baby_birthweight, model_smoken_momage)
+modelr::add_predictions(baby_birthweight, model_smoken_momage)
+
+baby_birthweight |> 
+  modelr::add_residuals(model_smoken_momage) |>
+  modelr::add_predictions(model_smoken_momage) |> 
+  ggplot(aes(x = resid, y = pred)) + geom_point()
+```
+
+This plot shows the model_smoken_momage regression plot of model residuals against fitted values. The points appear mostly equally distributed around residual = 0 with a possible slight left skew. 
 
 Compare your model to two others:
 
 One using length at birth and gestational age as predictors (main effects only)
 One using head circumference, length, sex, and all interactions (including the three-way interaction) between these
-Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate.
+Make this comparison in terms of the cross-validated prediction error; use crossv_mc and functions in purrr as appropriate. 
 
 Note that although we expect your model to be reasonable, model building itself is not a main idea of the course and we don’t necessarily expect your model to be “optimal”.
 

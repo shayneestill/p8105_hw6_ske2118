@@ -58,7 +58,7 @@ sure that victim_age is numeric.
 
 ``` r
 usa_df = 
-   read_csv("data/homicide-data.csv") |>
+   read_csv("data/homicide-data.csv", na = c("NA", ".", "")) |>
   mutate(city_state = str_c(city, state, sep = ",")) |>
    mutate(resolved = 
            as.numeric(disposition == "Closed by arrest")) |>
@@ -112,7 +112,8 @@ baltimore_glm |>
 | victim_sexMale | 0.426 |  0.324 |   0.558 |
 
 The odds of solving homicides for male victims is 0.426 times the odds
-of solving homicides for female victims is 0.426.
+of solving homicides for female victims is 0.426, adjusting for sex and
+race. The 95% confidence interval is (0.324, 0.558).
 
 Now run glm for each of the cities in your dataset, and extract the
 adjusted odds ratio (and CI) for solving homicides comparing male
@@ -316,7 +317,65 @@ model_smoken_momage |>
 
 Based on brief literature search, mother’s smoking status and mother’s
 age at time of birth tend to be associated with baby’s birthweight.
-Smoken and momage both appear to be significant.
+Smoken and momage both appear to be significant with p-values less than
+0.05.
+
+``` r
+modelr::add_residuals(baby_birthweight, model_smoken_momage)
+```
+
+    ## # A tibble: 4,342 × 21
+    ##    babysex bhead blength   bwt delwt fincome frace gaweeks malform menarche
+    ##    <fct>   <dbl>   <dbl> <dbl> <dbl>   <dbl> <fct>   <dbl> <fct>      <dbl>
+    ##  1 female     34      51  3629   177      35 White    39.9 absent        13
+    ##  2 male       34      48  3062   156      65 Black    25.9 absent        14
+    ##  3 female     36      50  3345   148      85 White    39.9 absent        12
+    ##  4 male       34      52  3062   157      55 White    40   absent        14
+    ##  5 female     34      52  3374   156       5 White    41.6 absent        13
+    ##  6 male       33      52  3374   129      55 White    40.7 absent        12
+    ##  7 female     33      46  2523   126      96 Black    40.3 absent        14
+    ##  8 female     33      49  2778   140       5 White    37.4 absent        12
+    ##  9 male       36      52  3515   146      85 White    40.3 absent        11
+    ## 10 male       33      50  3459   169      75 Black    40.7 absent        12
+    ## # ℹ 4,332 more rows
+    ## # ℹ 11 more variables: mheight <dbl>, momage <dbl>, mrace <fct>, parity <dbl>,
+    ## #   pnumlbw <dbl>, pnumsga <dbl>, ppbmi <dbl>, ppwt <dbl>, smoken <dbl>,
+    ## #   wtgain <dbl>, resid <dbl>
+
+``` r
+modelr::add_predictions(baby_birthweight, model_smoken_momage)
+```
+
+    ## # A tibble: 4,342 × 21
+    ##    babysex bhead blength   bwt delwt fincome frace gaweeks malform menarche
+    ##    <fct>   <dbl>   <dbl> <dbl> <dbl>   <dbl> <fct>   <dbl> <fct>      <dbl>
+    ##  1 female     34      51  3629   177      35 White    39.9 absent        13
+    ##  2 male       34      48  3062   156      65 Black    25.9 absent        14
+    ##  3 female     36      50  3345   148      85 White    39.9 absent        12
+    ##  4 male       34      52  3062   157      55 White    40   absent        14
+    ##  5 female     34      52  3374   156       5 White    41.6 absent        13
+    ##  6 male       33      52  3374   129      55 White    40.7 absent        12
+    ##  7 female     33      46  2523   126      96 Black    40.3 absent        14
+    ##  8 female     33      49  2778   140       5 White    37.4 absent        12
+    ##  9 male       36      52  3515   146      85 White    40.3 absent        11
+    ## 10 male       33      50  3459   169      75 Black    40.7 absent        12
+    ## # ℹ 4,332 more rows
+    ## # ℹ 11 more variables: mheight <dbl>, momage <dbl>, mrace <fct>, parity <dbl>,
+    ## #   pnumlbw <dbl>, pnumsga <dbl>, ppbmi <dbl>, ppwt <dbl>, smoken <dbl>,
+    ## #   wtgain <dbl>, pred <dbl>
+
+``` r
+baby_birthweight |> 
+  modelr::add_residuals(model_smoken_momage) |>
+  modelr::add_predictions(model_smoken_momage) |> 
+  ggplot(aes(x = resid, y = pred)) + geom_point()
+```
+
+![](hw6_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+
+This plot shows the model_smoken_momage regression plot of model
+residuals against fitted values. The points appear mostly equally
+distributed around residual = 0 with a possible slight left skew.
 
 Compare your model to two others:
 
@@ -357,7 +416,7 @@ cv_df |>
     ## # A tibble: 3,473 × 20
     ##    babysex bhead blength   bwt delwt fincome frace gaweeks malform menarche
     ##    <fct>   <dbl>   <dbl> <dbl> <dbl>   <dbl> <fct>   <dbl> <fct>      <dbl>
-    ##  1 male       34      48  3062   156      65 Black    25.9 absent        14
+    ##  1 female     34      51  3629   177      35 White    39.9 absent        13
     ##  2 female     36      50  3345   148      85 White    39.9 absent        12
     ##  3 male       34      52  3062   157      55 White    40   absent        14
     ##  4 female     34      52  3374   156       5 White    41.6 absent        13
@@ -366,7 +425,7 @@ cv_df |>
     ##  7 female     33      49  2778   140       5 White    37.4 absent        12
     ##  8 male       36      52  3515   146      85 White    40.3 absent        11
     ##  9 male       33      50  3459   169      75 Black    40.7 absent        12
-    ## 10 male       35      51  3459   146      55 White    39.4 absent        12
+    ## 10 female     35      51  3317   130      55 White    43.4 absent        13
     ## # ℹ 3,463 more rows
     ## # ℹ 10 more variables: mheight <dbl>, momage <dbl>, mrace <fct>, parity <dbl>,
     ## #   pnumlbw <dbl>, pnumsga <dbl>, ppbmi <dbl>, ppwt <dbl>, smoken <dbl>,
@@ -401,7 +460,7 @@ cv_res_df |>
   geom_violin()
 ```
 
-![](hw6_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+![](hw6_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
 
 Model one has the highest rmse, whereas model two has the second highest
 rmse and model three has the lowest rmse. Model three, the model using
